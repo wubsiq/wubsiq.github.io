@@ -1,4 +1,258 @@
-<p>hello world</p>
-<p>hello world</p>
-<p>hello world</p><p>THIS IS A TEST</p></br>
-<p>你好</p>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>井字棋小游戏</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial Rounded MT Bold', 'Arial', sans-serif;
+        }
+        
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            padding: 20px;
+        }
+        
+        .container {
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .status {
+            font-size: 1.5rem;
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 10px;
+            background-color: #f0f0f0;
+            transition: all 0.3s ease;
+        }
+        
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-gap: 10px;
+            margin: 20px auto;
+            max-width: 300px;
+        }
+        
+        .cell {
+            aspect-ratio: 1;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .cell:hover {
+            background-color: #f5f5f5;
+            transform: scale(1.05);
+        }
+        
+        .cell.x {
+            color: #ff4757;
+        }
+        
+        .cell.o {
+            color: #2ed573;
+        }
+        
+        .restart-btn {
+            background: linear-gradient(to right, #6a11cb, #2575fc);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-weight: bold;
+            padding: 12px 30px;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .restart-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+        }
+        
+        .restart-btn:active {
+            transform: translateY(1px);
+        }
+        
+        .win {
+            background-color: #d4edda;
+            color: #155724;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .instructions {
+            margin-top: 20px;
+            color: #666;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>井字棋</h1>
+        <div class="status" id="status">轮到 X 下棋</div>
+        <div class="game-board" id="gameBoard">
+            <!-- 游戏格子将通过JavaScript动态生成 -->
+        </div>
+        <button class="restart-btn" id="restartBtn">重新开始</button>
+        <div class="instructions">
+            <p>游戏规则：两位玩家轮流在3×3的格子中放置"X"和"O"，先连成一条直线（横、竖、斜）的玩家获胜。</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 游戏状态
+            const gameState = {
+                board: ['', '', '', '', '', '', '', '', ''],
+                currentPlayer: 'X',
+                gameOver: false,
+                winningCells: []
+            };
+
+            const gameBoard = document.getElementById('gameBoard');
+            const statusDisplay = document.getElementById('status');
+            const restartBtn = document.getElementById('restartBtn');
+
+            // 初始化游戏板
+            function initializeBoard() {
+                gameBoard.innerHTML = '';
+                for (let i = 0; i < 9; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.index = i;
+                    cell.addEventListener('click', () => handleCellClick(i));
+                    gameBoard.appendChild(cell);
+                }
+            }
+
+            // 处理格子点击
+            function handleCellClick(index) {
+                if (gameState.gameOver || gameState.board[index] !== '') {
+                    return;
+                }
+
+                // 更新游戏状态
+                gameState.board[index] = gameState.currentPlayer;
+                renderBoard();
+
+                // 检查游戏是否结束
+                if (checkWinner()) {
+                    statusDisplay.textContent = `玩家 ${gameState.currentPlayer} 获胜！`;
+                    gameState.gameOver = true;
+                    highlightWinningCells();
+                    return;
+                }
+
+                // 检查平局
+                if (gameState.board.every(cell => cell !== '')) {
+                    statusDisplay.textContent = '游戏平局！';
+                    gameState.gameOver = true;
+                    return;
+                }
+
+                // 切换玩家
+                gameState.currentPlayer = gameState.currentPlayer === 'X' ? 'O' : 'X';
+                statusDisplay.textContent = `轮到 ${gameState.currentPlayer} 下棋`;
+            }
+
+            // 渲染游戏板
+            function renderBoard() {
+                const cells = document.querySelectorAll('.cell');
+                cells.forEach((cell, index) => {
+                    cell.textContent = gameState.board[index];
+                    if (gameState.board[index] === 'X') {
+                        cell.classList.add('x');
+                    } else if (gameState.board[index] === 'O') {
+                        cell.classList.add('o');
+                    }
+                });
+            }
+
+            // 检查获胜者
+            function checkWinner() {
+                const winPatterns = [
+                    [0, 1, 2], [3, 4, 5], [6, 7, 8], // 横线
+                    [0, 3, 6], [1, 4, 7], [2, 5, 8], // 竖线
+                    [0, 4, 8], [2, 4, 6] // 对角线
+                ];
+
+                for (const pattern of winPatterns) {
+                    const [a, b, c] = pattern;
+                    if (
+                        gameState.board[a] !== '' &&
+                        gameState.board[a] === gameState.board[b] &&
+                        gameState.board[a] === gameState.board[c]
+                    ) {
+                        gameState.winningCells = pattern;
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            // 高亮显示获胜的格子
+            function highlightWinningCells() {
+                gameState.winningCells.forEach(index => {
+                    const cell = document.querySelector(`.cell[data-index="${index}"]`);
+                    cell.classList.add('win');
+                });
+            }
+
+            // 重新开始游戏
+            function restartGame() {
+                gameState.board = ['', '', '', '', '', '', '', '', ''];
+                gameState.currentPlayer = 'X';
+                gameState.gameOver = false;
+                gameState.winningCells = [];
+                statusDisplay.textContent = '轮到 X 下棋';
+                initializeBoard();
+            }
+
+            // 事件监听
+            restartBtn.addEventListener('click', restartGame);
+
+            // 初始化游戏
+            initializeBoard();
+        });
+    </script>
+</body>
+</html>
